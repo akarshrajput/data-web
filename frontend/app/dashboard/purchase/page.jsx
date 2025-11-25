@@ -47,6 +47,8 @@ function PurchaseContent() {
     setLoading(true);
 
     try {
+      console.log("🚀 Starting payment process...");
+
       // Load Razorpay script
       const scriptLoaded = await loadRazorpayScript();
       if (!scriptLoaded) {
@@ -55,17 +57,23 @@ function PurchaseContent() {
         return;
       }
 
+      console.log("📦 Creating order...", { quantity, filters });
+
       // Create order
       const orderResponse = await paymentAPI.createOrder({
         quantity,
         filterCriteria: filters,
       });
 
+      console.log("✅ Order created:", orderResponse.data);
+
       const { orderId, amount, purchaseId } = orderResponse.data.data;
 
       // Get Razorpay key
       const keyResponse = await paymentAPI.getRazorpayKey();
       const razorpayKey = keyResponse.data.key;
+
+      console.log("🔑 Razorpay key retrieved");
 
       // Razorpay options
       const options = {
@@ -77,6 +85,8 @@ function PurchaseContent() {
         order_id: orderId,
         handler: async function (response) {
           try {
+            console.log("💳 Payment completed, verifying...", response);
+
             // Verify payment
             await paymentAPI.verifyPayment({
               razorpay_order_id: response.razorpay_order_id,
@@ -85,14 +95,16 @@ function PurchaseContent() {
               purchaseId,
             });
 
+            console.log("✅ Payment verified");
+
             // Complete purchase (create snapshot)
             await purchaseAPI.completePurchase(purchaseId);
 
             alert("Payment successful!");
             router.push("/dashboard/purchases");
           } catch (error) {
+            console.error("❌ Payment verification failed:", error);
             alert("Payment verification failed");
-            console.error(error);
           }
         },
         prefill: {
@@ -103,13 +115,21 @@ function PurchaseContent() {
         theme: {
           color: "#000000",
         },
+        modal: {
+          ondismiss: function () {
+            console.log("💰 Payment modal dismissed");
+            setLoading(false);
+          },
+        },
       };
+
+      console.log("🎨 Opening Razorpay checkout...", options);
 
       const paymentObject = new window.Razorpay(options);
       paymentObject.open();
     } catch (error) {
-      console.error("Error:", error);
-      alert("Failed to initiate payment");
+      console.error("❌ Payment error:", error);
+      alert(`Failed to initiate payment: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -117,43 +137,58 @@ function PurchaseContent() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <h1 className="text-3xl font-bold">Purchase Data</h1>
+      <div className="text-center">
+        <h1 className="text-2xl font-bold md:text-3xl">Purchase Data</h1>
+        <p className="text-muted-foreground mt-2">
+          Review your selection and complete your purchase
+        </p>
+      </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Select Quantity</CardTitle>
+          <CardTitle>Order Summary</CardTitle>
           <CardDescription>
-            {maxQuantity} records available for your filters
+            {maxQuantity.toLocaleString()} records available for your filters
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="quantity">Quantity (max: {maxQuantity})</Label>
-            <Input
-              id="quantity"
-              type="number"
-              min="1"
-              max={maxQuantity}
-              value={quantity}
-              onChange={(e) => {
-                const val = parseInt(e.target.value);
-                if (val > 0 && val <= maxQuantity) {
-                  setQuantity(val);
-                }
-              }}
-            />
+        <CardContent className="space-y-6">
+          {/* Quantity Selector */}
+          <div className="space-y-3">
+            <Label htmlFor="quantity" className="text-base">
+              Number of Records
+            </Label>
+            <div className="flex items-center space-x-4">
+              <Input
+                id="quantity"
+                type="number"
+                min="1"
+                max={maxQuantity}
+                value={quantity}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  if (val > 0 && val <= maxQuantity) {
+                    setQuantity(val);
+                  }
+                }}
+                className="w-32"
+              />
+              <span className="text-sm text-muted-foreground">
+                of {maxQuantity.toLocaleString()} available
+              </span>
+            </div>
           </div>
 
-          <div className="space-y-2">
+          {/* Pricing */}
+          <div className="space-y-2 border-t pt-4">
             <div className="flex justify-between text-sm">
               <span>Price per record:</span>
               <span>₹{pricePerUnit}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span>Quantity:</span>
-              <span>{quantity}</span>
+              <span>{quantity.toLocaleString()}</span>
             </div>
-            <div className="flex justify-between font-semibold text-lg">
+            <div className="flex justify-between font-bold text-lg border-t pt-2">
               <span>Total:</span>
               <span>₹{totalPrice}</span>
             </div>
@@ -161,16 +196,16 @@ function PurchaseContent() {
 
           <Button
             onClick={handlePurchase}
-            className="w-full"
+            className="w-full h-12 text-base"
             size="lg"
             disabled={loading}
           >
-            {loading ? "Processing..." : "Proceed to Payment"}
+            {loading ? "Processing..." : `Purchase ₹${totalPrice}`}
           </Button>
 
-          <p className="text-xs text-muted-foreground text-center">
-            You will receive the exact data snapshot at the time of purchase.
-            New data added later won't affect your purchase.
+          <p className="text-xs text-center text-muted-foreground">
+            Secure payment powered by Razorpay. You will receive the exact data
+            snapshot at the time of purchase.
           </p>
         </CardContent>
       </Card>
@@ -180,18 +215,25 @@ function PurchaseContent() {
           <CardTitle>Applied Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-sm space-y-1">
+          <div className="space-y-2">
             {Object.entries(filters).map(([key, value]) => {
               if (value) {
                 return (
-                  <div key={key} className="flex justify-between">
-                    <span className="text-muted-foreground">{key}:</span>
+                  <div key={key} className="flex justify-between text-sm">
+                    <span className="text-muted-foreground capitalize">
+                      {key.replace(/([A-Z])/g, " $1").trim()}:
+                    </span>
                     <span>{value}</span>
                   </div>
                 );
               }
               return null;
             })}
+            {Object.values(filters).every((v) => !v) && (
+              <p className="text-sm text-muted-foreground">
+                No filters applied
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>

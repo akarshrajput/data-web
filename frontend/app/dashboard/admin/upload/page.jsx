@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Card,
   CardContent,
@@ -13,7 +13,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { dataAPI } from "@/lib/api";
-import { Upload, Plus, X } from "lucide-react";
+import { Upload, Plus, X, Building2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 const ROLE_OPTIONS = [
   "CEO",
@@ -295,27 +297,56 @@ export default function AdminUploadPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Upload Data</h1>
+      <div className="flex items-center space-x-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-primary text-primary-foreground">
+          <Building2 className="h-6 w-6" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold md:text-3xl">Upload Business Data</h1>
+          <p className="text-muted-foreground">
+            Add new business records to the database
+          </p>
+        </div>
+      </div>
 
       {success && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-          Data uploaded successfully!
-        </div>
+        <Card className="border-green-200 bg-green-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center space-x-2 text-green-700">
+              <Badge variant="outline" className="border-green-200 text-green-700">
+                Success
+              </Badge>
+              <span>Data uploaded successfully!</span>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Basic Information - Required */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Basic Information *</CardTitle>
-            <CardDescription>
-              Required fields (Name, Type, Email, Phone)
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name *</Label>
+        <Tabs defaultValue="basic" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="basic">Basic Info</TabsTrigger>
+            <TabsTrigger value="address">Address</TabsTrigger>
+            <TabsTrigger value="business">Business</TabsTrigger>
+            <TabsTrigger value="additional">Additional</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="basic" className="space-y-4">
+            {/* Basic Information - Required */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <span>Basic Information</span>
+                  <Badge variant="secondary" className="text-xs">Required</Badge>
+                </CardTitle>
+                <CardDescription>
+                  Essential company details that are required for all entries
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Company Name *</Label>
                 <Input
                   id="name"
                   name="name"
@@ -328,19 +359,22 @@ export default function AdminUploadPage() {
               <div className="space-y-2">
                 <Label htmlFor="type">Type *</Label>
                 <Select
-                  id="type"
-                  name="type"
                   value={formData.type}
-                  onChange={handleChange}
+                  onValueChange={(value) => setFormData({ ...formData, type: value })}
                   required
                 >
-                  <option value="company">Company</option>
-                  <option value="business">Business</option>
-                  <option value="industry">Industry</option>
-                  <option value="shop">Shop</option>
-                  <option value="startup">Startup</option>
-                  <option value="organization">Organization</option>
-                  <option value="other">Other</option>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="company">Company</SelectItem>
+                    <SelectItem value="business">Business</SelectItem>
+                    <SelectItem value="industry">Industry</SelectItem>
+                    <SelectItem value="shop">Shop</SelectItem>
+                    <SelectItem value="startup">Startup</SelectItem>
+                    <SelectItem value="organization">Organization</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
 
@@ -521,18 +555,20 @@ export default function AdminUploadPage() {
               <div className="space-y-2">
                 <Label htmlFor="employeeCount">Employee Count</Label>
                 <Select
-                  id="employeeCount"
-                  name="employeeCount"
                   value={formData.employeeCount}
-                  onChange={handleChange}
+                  onValueChange={(value) => setFormData({ ...formData, employeeCount: value })}
                 >
-                  <option value="">Select</option>
-                  <option value="1-10">1-10</option>
-                  <option value="11-50">11-50</option>
-                  <option value="51-200">51-200</option>
-                  <option value="201-500">201-500</option>
-                  <option value="501-1000">501-1000</option>
-                  <option value="1000+">1000+</option>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select employee count" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1-10">1-10</SelectItem>
+                    <SelectItem value="11-50">11-50</SelectItem>
+                    <SelectItem value="51-200">51-200</SelectItem>
+                    <SelectItem value="201-500">201-500</SelectItem>
+                    <SelectItem value="501-1000">501-1000</SelectItem>
+                    <SelectItem value="1000+">1000+</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
 
@@ -560,18 +596,20 @@ export default function AdminUploadPage() {
               <div className="space-y-2">
                 <Label htmlFor="companyType">Company Type</Label>
                 <Select
-                  id="companyType"
-                  name="companyType"
                   value={formData.companyType}
-                  onChange={handleChange}
+                  onValueChange={(value) => setFormData({ ...formData, companyType: value })}
                 >
-                  <option value="">Select</option>
-                  <option value="Private Limited">Private Limited</option>
-                  <option value="Public Limited">Public Limited</option>
-                  <option value="LLP">LLP</option>
-                  <option value="Partnership">Partnership</option>
-                  <option value="Proprietorship">Proprietorship</option>
-                  <option value="Other">Other</option>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select company type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Private Limited">Private Limited</SelectItem>
+                    <SelectItem value="Public Limited">Public Limited</SelectItem>
+                    <SelectItem value="LLP">LLP</SelectItem>
+                    <SelectItem value="Partnership">Partnership</SelectItem>
+                    <SelectItem value="Proprietorship">Proprietorship</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
 

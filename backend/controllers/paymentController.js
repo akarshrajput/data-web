@@ -8,12 +8,26 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
+// Validate Razorpay configuration
+if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+  console.error("⚠️  Razorpay credentials not found in environment variables");
+  console.log(
+    "Required environment variables: RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET"
+  );
+}
+
 // @desc    Create Razorpay order
 // @route   POST /api/payment/create-order
 // @access  Private
 exports.createOrder = async (req, res) => {
   try {
     const { quantity, filterCriteria } = req.body;
+
+    console.log("📝 Creating order:", {
+      quantity,
+      filterCriteria,
+      user: req.user._id,
+    });
 
     if (!quantity || quantity < 1) {
       return res.status(400).json({
@@ -22,9 +36,20 @@ exports.createOrder = async (req, res) => {
       });
     }
 
+    // Check if Razorpay is properly configured
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      console.error("❌ Razorpay credentials missing");
+      return res.status(500).json({
+        success: false,
+        message: "Payment gateway not configured",
+      });
+    }
+
     // Price calculation: 0.5 rupee per data record
     const pricePerUnit = 0.5;
     const totalAmount = quantity * pricePerUnit;
+
+    console.log("💰 Order details:", { quantity, pricePerUnit, totalAmount });
 
     // Create Razorpay order
     const options = {
@@ -37,7 +62,11 @@ exports.createOrder = async (req, res) => {
       },
     };
 
+    console.log("🏗️  Creating Razorpay order with options:", options);
+
     const order = await razorpay.orders.create(options);
+
+    console.log("✅ Razorpay order created:", order.id);
 
     // Create purchase record with pending status
     const purchase = await Purchase.create({
@@ -50,6 +79,8 @@ exports.createOrder = async (req, res) => {
       paymentStatus: "pending",
     });
 
+    console.log("💾 Purchase record created:", purchase._id);
+
     res.json({
       success: true,
       data: {
@@ -60,7 +91,7 @@ exports.createOrder = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error(error);
+    console.error("❌ Error creating order:", error);
     res.status(500).json({
       success: false,
       message: "Error creating order",
